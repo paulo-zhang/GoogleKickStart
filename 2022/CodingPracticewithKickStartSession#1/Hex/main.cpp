@@ -1,67 +1,55 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-// Return column index if it reached to other end, otherwise return -1;
-int checkRedDFS(const vector<vector<char>>& board, int x, int y, vector<vector<bool>>& visited){
+// DFS traverse, visit all cells.
+void markPath(const vector<vector<char>>& board, vector<vector<bool>>& visited, int x, int y, char chess){
     int n = board.size();
+    if(x < 0 || x >= n || y < 0 || y >= n || visited[x][y] || board[x][y] != chess) return;
+    visited[x][y] = true;
 
-    if(x == n - 1 && board[x][y] == 'R') return y; // Reached to the other end.
-
-    auto checkNeighbor = [&board, &visited, n](int x, int y){
-        if(x < 0 || x >= n || y < 0 || y >= n) return -1;
-        if(!visited[x][y] && board[x][y] == 'R'){
-            visited[x][y] = true;
-            return checkRedDFS(board, x, y, visited);
-        }
-
-        return -1;
-    };
-
+    // Check top left
+    markPath(board, visited, x - 1, y, chess);
+    // Check top right
+    markPath(board, visited, x - 1, y + 1, chess);
     // Check left.
-    int temp = checkNeighbor(x, y - 1);
-    if(temp != -1) return temp;
+    markPath(board, visited, x, y - 1, chess);
     // check right.
-    temp = checkNeighbor(x, y + 1);
-    if(temp != -1) return temp;
-    
+    markPath(board, visited, x, y + 1, chess);
     // Check bottom-left.
-    temp = checkNeighbor(x + 1, y - 1);
-    if(temp != -1) return temp;
+    markPath(board, visited, x + 1, y - 1, chess);
     // check bottom.
-    return checkNeighbor(x + 1, y);
+    markPath(board, visited, x + 1, y, chess);
 }
 
-// Return row index if it reached to other end, otherwise return -1;
-int checkBlueDFS(const vector<vector<char>>& board, int x, int y, vector<vector<bool>>& visited){
+bool checkRedWins(const vector<vector<char>>& board){
     int n = board.size();
+    vector<vector<bool>> visited(n, vector<bool>(n, false));
+    for(int i = 0; i < n; i++){
+        markPath(board, visited, 0, i, 'R');
+    }
 
-    if(y == n - 1 && board[x][y] == 'B') return x; // Reached to the other end.
+    for(int i = 0; i < n; i++){
+        if(visited[n - 1][i]) return true; // End of the board visited.
+    }
 
-    auto checkNeighbor = [&board, &visited, n](int x, int y){
-        if(x < 0 || x >= n || y < 0 || y >= n) return -1;
-        if(!visited[x][y] && board[x][y] == 'B'){
-            visited[x][y] = true;
-            return checkBlueDFS(board, x, y, visited);
-        }
-
-        return -1;
-    };
-
-    // Check left.
-    int temp = checkNeighbor(x - 1, y);
-    if(temp != -1) return temp;
-    // check right.
-    temp = checkNeighbor(x + 1, y);
-    if(temp != -1) return temp;
-    
-    // Check bottom-left.
-    temp = checkNeighbor(x - 1, y + 1);
-    if(temp != -1) return temp;
-    // check bottom.
-    return checkNeighbor(x, y + 1);
+    return false;
 }
 
-string FindBoardStatus(const vector<vector<char>>& board) {
+bool checkBlueWins(const vector<vector<char>>& board){
+    int n = board.size();
+    vector<vector<bool>> visited(n, vector<bool>(n, false));
+    for(int i = 0; i < n; i++){
+        markPath(board, visited, i, 0, 'B');
+    }
+
+    for(int i = 0; i < n; i++){
+        if(visited[i][n - 1]) return true; // End of the board visited.
+    }
+
+    return false;
+}
+
+string FindBoardStatus(vector<vector<char>>& board) {
     int n = board.size();
     int redCount = 0, blueCount = 0;
     for(auto& row : board){
@@ -73,40 +61,52 @@ string FindBoardStatus(const vector<vector<char>>& board) {
     
     if(abs(redCount - blueCount) > 1) return "Impossible";
     
-    int redWinEnd = -1;
-    for(int i = 0;i < n; i++){
-        vector<vector<bool>> visited(n, vector<bool>(n, false));
-        if(redWinEnd != -1) visited[n - 1][redWinEnd] = true; // To avoid end at the same spot.
-
-        int end = checkRedDFS(board, 0, i, visited);
-        if(end != -1){ // Win this one.
-            if(redWinEnd != -1) return "Impossible"; // Win twice.
-            redWinEnd = end;
+    if(checkRedWins(board)){
+        if(blueCount > redCount){ // Blue count is bigger, means blue is last step and Red could not win.
+            return "Impossible";
         }
+
+        // Check whether Red is double win: removing one red would break the win.
+        for(int k = 0;k < n; k++){
+            for(int l = 0;l < n; l ++){
+                if(board[k][l] == 'R'){
+                    board[k][l] = '.'; // Remove one Red.
+                    bool redWins = !checkRedWins(board);
+                    board[k][l] = 'R'; // Restore Red
+
+                    if(redWins){ // The cross is broken, means Red wins only once.
+                        return "Red wins";
+                    }
+                }
+            }
+        }
+
+        return "Impossible"; // Couldn't break the cross by removing one Red, this means double wining.
     }
     
-    
-    int blueWinEnd = -1;
-    for(int i = 0;i < n; i++){
-        vector<vector<bool>> visited(n, vector<bool>(n, false));
-        if(blueWinEnd != -1) visited[blueWinEnd][n - 1] = true;
-        int end = checkBlueDFS(board, i, 0, visited);
-        if(end != -1){ // Win this one.
-            if(blueWinEnd != -1) return "Impossible"; // Win twice.
-            blueWinEnd = end;
+    if(checkBlueWins(board)){
+        if(redCount > blueCount){ // Red count is bigger, means red is last step and blue could not win.
+            return "Impossible";
         }
+
+        // Check whether Blue is double win: removing one blue would break the win.
+        for(int k = 0;k < n; k++){
+            for(int l = 0;l < n; l ++){
+                if(board[k][l] == 'B'){
+                    board[k][l] = '.'; // Remove one Blue.
+                    bool redWins = !checkBlueWins(board);
+                    board[k][l] = 'B'; // Restore Blue
+
+                    if(redWins){ // The cross is broken, means Blue wins only once.
+                        return "Blue wins";
+                    }
+                }
+            }
+        }
+
+        return "Impossible"; // Couldn't break the cross by removing one Blue, this means double wining.
     }
 
-    if(redWinEnd != -1 && blueWinEnd != -1){
-        return "Impossible"; // Double win.
-    }
-    else if(redWinEnd != -1){
-        return "Red wins";
-    }
-    else if(blueWinEnd != -1){
-        return "Blue wins";
-    }
-    
     return "Nobody wins";
 }
 
