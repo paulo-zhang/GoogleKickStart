@@ -117,10 +117,10 @@ string FindBoardStatus(const vector<vector<char>>& board) {
 }
 
 int main() {
-    ifstream fin("ts2_input.txt");
-    ofstream fout("output.txt");
-    // auto& fin = cin;
-    // auto& fout = cout;
+    // ifstream fin("ts2_input.txt");
+    // ofstream fout("output.txt");
+    auto& fin = cin;
+    auto& fout = cout;
   int t;
   fin >> t;
   for (int tc = 1; tc <= t; ++tc) {
